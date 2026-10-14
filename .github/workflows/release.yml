@@ -1,0 +1,53 @@
+name: Build, test and publish bundle
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+            server/package-lock.json
+
+      - run: npm ci
+
+      - name: Router tests
+        working-directory: contracts
+        run: forge test -vv
+
+      - name: Export ABIs and bytecode
+        run: node scripts/export-artifacts.mjs
+
+      - run: bash scripts/bundle.sh
+
+      - name: End-to-end test on anvil
+        run: node server/test/e2e.mjs
+
+      - name: Publish to the "latest" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view latest >/dev/null 2>&1 || \
+            gh release create latest --title "Latest build" --notes "Rolling build of main."
+          gh release upload latest dist/aggregator.tar.gz artifacts/aggregator.json presets/chains.json --clobber
+          gh release edit latest --notes "Rolling build of main at ${GITHUB_SHA::7}. aggregator.tar.gz is the hosted aggregator; aggregator.json has the router ABI and bytecode; chains.json has the DEX presets."

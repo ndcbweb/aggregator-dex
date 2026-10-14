@@ -1,0 +1,24 @@
+[profile.default]
+src = "src"
+test = "test"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.24"
+# Paris (no PUSH0) so the router also deploys on private chains whose genesis predates Shanghai.
+evm_version = "paris"
+optimizer = true
+optimizer_runs = 1000
+via_ir = true
+bytecode_hash = "none"
+cbor_metadata = false
+remappings = ["forge-std/=lib/forge-std/src/"]
+
+[rpc_endpoints]
+ethereum = "${ETH_RPC_URL}"
+bsc = "${BSC_RPC_URL}"
+base = "${BASE_RPC_URL}"
+arbitrum = "${ARB_RPC_URL}"
+polygon = "${POLYGON_RPC_URL}"
+
+[lint]
+lint_on_build = false
